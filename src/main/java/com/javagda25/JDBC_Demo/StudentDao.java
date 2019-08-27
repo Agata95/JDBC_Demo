@@ -1,9 +1,7 @@
 package com.javagda25.JDBC_Demo;
 
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
+import java.io.IOException;
+import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Scanner;
@@ -15,9 +13,11 @@ public class StudentDao {
 
     private MysqlConnection mysqlConnection;
 
-    public StudentDao() throws SQLException {
+    //    pierwszy błąd dotyczy pliku konfiguracyjnego, drugi dotyczy połączenia z bazą danych
+    public StudentDao() throws SQLException, IOException {
         mysqlConnection = new MysqlConnection();
 
+//        musimy mieć pewność, że tabela jest utworzona
         createTableIfNoExists();
     }
 
@@ -75,7 +75,8 @@ public class StudentDao {
         return studentList;
     }
 
-    public void listByName() throws SQLException {
+    public List<Student> listByName() throws SQLException {
+        List<Student> studentList = new ArrayList<>();
         try (Connection connection = mysqlConnection.getConnection()) {
             try (PreparedStatement statement = connection.prepareStatement(SELECT_NAME_QUERY)) {
                 System.out.println("Which student, you want to search? (name)");
@@ -93,9 +94,11 @@ public class StudentDao {
                 }
             }
         }
+        return studentList;
     }
 
-    public void listById() throws SQLException {
+    public List<Student> listById() throws SQLException {
+        List<Student> studentList = new ArrayList<>();
         try (Connection connection = mysqlConnection.getConnection()) {
             try (PreparedStatement statement = connection.prepareStatement(SELECT_ID_QUERY)) {
                 System.out.println("Which student, you want to search? (id number)");
@@ -113,6 +116,7 @@ public class StudentDao {
                 }
             }
         }
+        return studentList;
     }
 
     public List<Student> listOfStudents() throws SQLException {
@@ -149,7 +153,7 @@ public class StudentDao {
         return student;
     }
 
-    public void removeStudent() throws SQLException {
+    public boolean removeStudent() throws SQLException {
 //        polecenie try() musi tu być użyte, aby po wykonaniu dostęp się zamknął
 //        connection is closable
         try (Connection connection = mysqlConnection.getConnection()) {
@@ -161,30 +165,39 @@ public class StudentDao {
             try (PreparedStatement statement = connection.prepareStatement(REMOVE_QUERY)) {
                 statement.setLong(1, id);
 
-                boolean success = statement.execute();
-
-                if (success) {
-                    System.out.println("Sukces!");
+                int affectedRecords = statement.executeUpdate();
+                if (affectedRecords > 0) {
+//                    usuneliśmy rekord
+                    System.out.println("Student was remove.");
+                    return true;
                 }
+
             }
         }
+        System.out.println("Student wasn't remove. This id doesn't exists.");
+        return false;
     }
 
     public void insertStudent(Student student) throws SQLException {
         try (Connection connection = mysqlConnection.getConnection()) {
 
-            try (PreparedStatement statement = connection.prepareStatement(INSERT_QUERY)) {
+            try (PreparedStatement statement = connection.prepareStatement(INSERT_QUERY, Statement.RETURN_GENERATED_KEYS)) {
+//                generated keys jest po to abyśmy mogli wydobyć np. numer ID, wtedy trzeba użyć executeUpdate niżej
                 statement.setString(1, student.getName());
                 statement.setInt(2, student.getAge());
                 statement.setDouble(3, student.getAverage());
                 statement.setBoolean(4, student.isAlive());
 
-                boolean success = statement.execute();
+//                execute() zwraca boolean, jeśli interesuje nas czy w wyniku otrzymaliśmy dane
+//                executeUpdate() wywołuje informacje ile rekordów zostało zmienione, zwraca int
+                int affectedRecords = statement.executeUpdate();
 
-                if (success) {
-                    System.out.println("Sukces!");
+                ResultSet resultSet = statement.getGeneratedKeys();
+
+                if (resultSet.next()) {
+                    Long generatedID = resultSet.getLong(1);
+                    System.out.println("Was created id number " + generatedID);
                 }
-
             }
         }
     }

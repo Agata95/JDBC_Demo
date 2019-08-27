@@ -1,13 +1,7 @@
 package com.javagda25.JDBC_Demo;
 
-import com.mysql.cj.jdbc.MysqlDataSource;
-
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
+import java.io.IOException;
 import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Scanner;
 
 public class Main {
@@ -21,10 +15,15 @@ public class Main {
             questions(studentDao);
 
         } catch (SQLException e) {
+            System.err.println("Student dao cannot be created. Mysql error.");
+            System.err.println("Error: " + e.getMessage());
             e.printStackTrace();
+            return;
+        } catch (IOException e) {
+            System.err.println("Configuration file error.");
+            System.err.println("Error executing command: " + e.getMessage());
+            return;
         }
-
-
     }
 
     private static void questions(StudentDao studentDao) throws SQLException {
